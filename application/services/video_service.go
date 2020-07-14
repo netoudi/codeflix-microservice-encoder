@@ -8,6 +8,7 @@ import (
     "io/ioutil"
     "log"
     "os"
+    "os/exec"
 )
 
 type VideoService struct {
@@ -56,4 +57,30 @@ func (v *VideoService) Download(bucketName string) error {
     log.Printf("video %v has been stored", v.Video.ID)
 
     return nil
+}
+
+func (v *VideoService) Fragment() error {
+    err := os.Mkdir(os.Getenv("LOCAL_STORAGE_PATH")+"/"+v.Video.ID, os.ModePerm)
+    if err != nil {
+        return err
+    }
+
+    source := os.Getenv("LOCAL_STORAGE_PATH") + "/" + v.Video.ID + ".mp4"
+    target := os.Getenv("LOCAL_STORAGE_PATH") + "/" + v.Video.ID + ".frag"
+
+    cmd := exec.Command("mp4fragment", source, target)
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        return err
+    }
+
+    printOutput(output)
+
+    return nil
+}
+
+func printOutput(out []byte) {
+    if len(out) > 0 {
+        log.Printf("==> OUTPUT: %s\n", string(out))
+    }
 }

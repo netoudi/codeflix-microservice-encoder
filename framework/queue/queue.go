@@ -29,8 +29,8 @@ func NewRabbitMQ() *RabbitMQ {
         Host:              os.Getenv("RABBITMQ_DEFAULT_HOST"),
         Port:              os.Getenv("RABBITMQ_DEFAULT_PORT"),
         VHost:             os.Getenv("RABBITMQ_DEFAULT_VHOST"),
-        ConsumerQueueName: os.Getenv("RABBITMQ_DEFAULT_CONSUMER_QUEUE_NAME"),
-        ConsumerName:      os.Getenv("RABBITMQ_DEFAULT_CONSUMER_NAME"),
+        ConsumerQueueName: os.Getenv("RABBITMQ_CONSUMER_QUEUE_NAME"),
+        ConsumerName:      os.Getenv("RABBITMQ_CONSUMER_NAME"),
         AutoAck:           false,
         Args:              rabbitMQArgs,
     }

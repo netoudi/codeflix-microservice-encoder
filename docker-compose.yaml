@@ -5,6 +5,8 @@ services:
     build: .
     volumes:
       - ./:/go/src/
+    networks:
+      - app-network
 
   db:
     image: "postgres:9.4"
@@ -13,11 +15,13 @@ services:
     volumes:
       - .pgdata:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USERNAME=root
+      - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=encoder
     ports:
       - "5432:5432"
+    networks:
+      - app-network
 
   rabbit:
     image: "rabbitmq:3-management"
@@ -29,3 +33,9 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

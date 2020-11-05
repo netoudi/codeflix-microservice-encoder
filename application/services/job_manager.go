@@ -4,6 +4,7 @@ import (
     "encoder/application/repositories"
     "encoder/domain"
     "encoder/framework/queue"
+    "encoding/json"
     "github.com/jinzhu/gorm"
     "github.com/streadway/amqp"
     "log"
@@ -66,6 +67,28 @@ func (j *JobManger) Start(ch *amqp.Channel) {
     }
 }
 
+func (j *JobManger) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) error {
+    jobJson, err := json.Marshal(jobResult.Job)
+
+    if err != nil {
+        return err
+    }
+
+    err = j.notify(jobJson)
+
+    if err != nil {
+        return err
+    }
+
+    err = jobResult.Message.Ack(false)
+
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 func (j *JobManger) checkParseErrors(jobResult JobWorkerResult) error {
     if jobResult.Job.ID != "" {
         log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing job: #{jobResult.Job.ID}")
@@ -73,14 +96,43 @@ func (j *JobManger) checkParseErrors(jobResult JobWorkerResult) error {
         log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing message: #{jobResult.Error}")
     }
 
-    //errorMsg := JobNotificationError{
-    //    Message: string(jobResult.Message.Body),
-    //    Error:   jobResult.Error.Error(),
-    //}
+    errorMsg := JobNotificationError{
+        Message: string(jobResult.Message.Body),
+        Error:   jobResult.Error.Error(),
+    }
 
-    //jobJson, err := json.Marshal(errorMsg)
+    jobJson, err := json.Marshal(errorMsg)
 
-    // TODO: implements notification
+    if err != nil {
+        return err
+    }
+
+    err = j.notify(jobJson)
+
+    if err != nil {
+        return err
+    }
+
+    err = jobResult.Message.Reject(false)
+
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (j *JobManger) notify(jobJson []byte) error {
+    err := j.RabbitMQ.Notify(
+        string(jobJson),
+        "application/json",
+        os.Getenv("RABBITMQ_NOTIFICATION_EX"),
+        os.Getenv("RABBITMQ_NOTIFICATION_ROUTING_KEY"),
+    )
+
+    if err != nil {
+        return err
+    }
 
     return nil
 }

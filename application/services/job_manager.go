@@ -10,6 +10,7 @@ import (
     "log"
     "os"
     "strconv"
+    "sync"
 )
 
 type JobManger struct {
@@ -24,6 +25,8 @@ type JobNotificationError struct {
     Message string `json:"message"`
     Error   string `json:"error"`
 }
+
+var Mutex = &sync.Mutex{}
 
 func NewJobManager(db *gorm.DB, rabbitMQ *queue.RabbitMQ, jobReturnChannel chan JobWorkerResult, messageChannel chan amqp.Delivery) *JobManger {
     return &JobManger{
@@ -68,7 +71,9 @@ func (j *JobManger) Start(ch *amqp.Channel) {
 }
 
 func (j *JobManger) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) error {
+    Mutex.Lock()
     jobJson, err := json.Marshal(jobResult.Job)
+    Mutex.Unlock()
 
     if err != nil {
         return err
@@ -91,9 +96,15 @@ func (j *JobManger) notifySuccess(jobResult JobWorkerResult, ch *amqp.Channel) e
 
 func (j *JobManger) checkParseErrors(jobResult JobWorkerResult) error {
     if jobResult.Job.ID != "" {
-        log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing job: #{jobResult.Job.ID}")
+        log.Printf(
+            "MessageID: %v. Error during the job: %v with video: %v. Error: %v",
+            jobResult.Message.DeliveryTag,
+            jobResult.Job.ID,
+            jobResult.Job.Video.ID,
+            jobResult.Error.Error(),
+        )
     } else {
-        log.Printf("MessageID #{jobResult.Message.DeliveryTag}. Error parsing message: #{jobResult.Error}")
+        log.Printf("MessageID: %v. Error parsing message: %v", jobResult.Message.DeliveryTag, jobResult.Error)
     }
 
     errorMsg := JobNotificationError{

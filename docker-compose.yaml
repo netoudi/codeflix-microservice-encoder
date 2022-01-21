@@ -5,8 +5,8 @@ services:
     build: .
     volumes:
       - ./:/go/src/
-    networks:
-      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   db:
     image: "postgres:9.4"
@@ -20,8 +20,8 @@ services:
       - POSTGRES_DB=encoder
     ports:
       - "5432:5432"
-    networks:
-      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   rabbit:
     image: "rabbitmq:3-management"
@@ -33,9 +33,5 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
